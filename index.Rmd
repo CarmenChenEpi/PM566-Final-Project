@@ -9,7 +9,6 @@ output:
 
 This is my PM566 Final Project website home. The website is online at https://carmenchenepi.github.io/PM566-Final-Project/.
 
-
 ```{r setup, message=FALSE, echo=FALSE, warning=FALSE}
 library(data.table)
 library(tidyverse)

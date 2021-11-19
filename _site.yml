@@ -1,1 +1,9 @@
-
+name: "Carmen's PM566 website"
+navbar:
+  title: "Carmen's PM566 Website"
+  left:
+    - text: "Home"
+      href: index.html
+output:
+  html_document:
+    theme: paper

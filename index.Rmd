@@ -1,6 +1,6 @@
 ---
 title: "Vaccination rates and COVID-19 cases and deaths in California"
-author: "Carmen Chen"
+author: "Carmen Jiawen Chen"
 date: "12/2/2021"
 output:
   pdf_document:

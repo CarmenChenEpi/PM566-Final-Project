@@ -14,7 +14,7 @@ This is my PM566 Final Project website home.
 
 The website is online [**here**](https://carmenchenepi.github.io/PM566-Final-Project)
 
-Link to [**download the PDF report**](https://raw.githubusercontent.com/CarmenChenEpi/PM566-Final-Project/main/report.pd)
+Link to [**download the PDF report**](https://raw.githubusercontent.com/CarmenChenEpi/PM566-Final-Project/main/report.pdf)
 
 
 ```{r setup, include=FALSE}

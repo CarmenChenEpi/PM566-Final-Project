@@ -29,7 +29,7 @@ library(plotly)
 
 
 
-**Introduction** 
+# **Introduction** 
 
 The vaccinations have begun almost a year since its distribution. The fully vaccinated percentage in California was increasing and stagnated around 60%. However, the herd immunity didn't seem to be achieved and the COVID-19 daily new cases is still very high in California. Therefore, this project aims to investigate the relationship of vaccination rates on COVID-19 daily new cases and deaths in California by using the data from California Health & Human Services Agency and US Center for Disease Control and Prevention. 
 
@@ -37,7 +37,7 @@ The vaccinations have begun almost a year since its distribution. The fully vacc
 
 
 
-**Methods**
+# **Methods**
 
 
 Data of COVID-19 cases and vaccination rates were acquired from California Health & Human Services Agency and US Center for Disease Control and Prevention, respectively. Data in California and with variables of interest (i.e., date, county, percentage of first dose, percentage of second dose, daily new cases, cumulative cases, daily new deaths, and cumulative deaths) were extracted. The date variables were formatted in both datasets.  
@@ -144,7 +144,7 @@ covid[!complete.cases(covid),]
 
 
 
-**Preliminary Results**
+# **Results**
 
 Table 1 presented the summary statistics of the data, including range of the date and median (IQR) of first dose, second dose, daily new cases, cumulative cases, daily new deaths, and cumulative deaths. There are a total of 296 observations collected from 2020-12-14 to 2021-10-05. The maximum partial and fully vaccination rates in California are 52% and 64%, respectively. The medians (IQRs) of the daily new cases and deaths are 4275 (1810, 11520) and 64 (23, 159), respectively. 
 
@@ -281,7 +281,7 @@ county_vaccinations %>% filter(dose1>0) %>%
 
 
 
-**Conclusion**
+# **Conclusion**
 
 There is a positive association of vaccination rates and daily new cases and deaths when the first dose of vaccination rate achieved around 50%. This may be due to the re-opening of the economic and lift of mask mandate during that time. Overall, we could see the protective effect of vaccine towards infection and death according to the data in the beginning. A stronger negative association in the beginning of vaccination rates and daily new deaths compared to daily new cases may be due to a stronger efficacy of the vaccine towards preventing mortality. 
 

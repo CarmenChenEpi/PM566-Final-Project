@@ -1,77 +1,289 @@
 ---
-title: "PM566 Final Project"
+title: "Vaccination rates and COVID-19 cases and deaths in California"
 author: "Carmen Chen"
-output: 
-    html_document:
-        toc: TRUE
-        toc_float: TRUE
+date: "12/2/2021"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+    toc_float: yes
 ---
 
-This is my PM566 Final Project website home. The website is online at https://carmenchenepi.github.io/PM566-Final-Project/.
+This is my PM566 Final Project website home. 
 
-```{r setup, message=FALSE, echo=FALSE, warning=FALSE}
+The website is online [**here**](https://carmenchenepi.github.io/PM566-Final-Project)
+
+Link to [**download the PDF report**](https://raw.githubusercontent.com/CarmenChenEpi/PM566-Final-Project/main/report.pd)
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 library(data.table)
 library(tidyverse)
 library(dplyr)
+library(ggplot2)
+library(gtsummary)
 library(plotly)
-library(DT)
-library(knitr)
 ```
 
-```{r}
-# Initialize code chunk options
-opts_chunk$set(
-  warning = FALSE,
-  message = FALSE,
-  eval=TRUE,
-  echo = TRUE,
-  cache = FALSE,
-  fig.width = 7, 
-  fig.align = 'center',
-  fig.asp = 0.618,
-  out.width = "700px")
+
+
+**Introduction** 
+
+The vaccinations have begun almost a year since its distribution. The fully vaccinated percentage in California was increasing and stagnated around 60%. However, the herd immunity didn't seem to be achieved and the COVID-19 daily new cases is still very high in California. Therefore, this project aims to investigate the relationship of vaccination rates on COVID-19 daily new cases and deaths in California by using the data from California Health & Human Services Agency and US Center for Disease Control and Prevention. 
+
+
+
+
+
+**Methods**
+
+
+Data of COVID-19 cases and vaccination rates were acquired from California Health & Human Services Agency and US Center for Disease Control and Prevention, respectively. Data in California and with variables of interest (i.e., date, county, percentage of first dose, percentage of second dose, daily new cases, cumulative cases, daily new deaths, and cumulative deaths) were extracted. The date variables were formatted in both datasets.  
+
+
+```{r read in the data, echo=FALSE}
+cases <- read.csv("data/Cases.csv")
+vaccinations <- read.csv("data/Vaccinations.csv")
+county_cases <- read.csv("data/Cases.csv")
+county_vaccinations <- read.csv("data/county_vaccine.csv")
 ```
 
-```{r}
-source("process_COVID_data.R")
-p1_scatter <- cv_states_today %>% 
-  plot_ly(x = ~pop_density, y = ~deathsper100k,
-          type = 'scatter', mode = 'markers', color = ~state,
-          size = ~population, sizes = c(5, 70), marker = list(sizemode='diameter', opacity=0.5),
-          hoverinfo = 'text',
-          text = ~paste( paste(state, ":", sep=""), paste(" Cases per 100k: ", per100k, sep="") , paste(" Deaths per 100k: ",
-                        deathsper100k, sep=""), sep = "<br>")) %>%
-  layout(title = "Population-normalized COVID-19 deaths vs. population density",
-                  yaxis = list(title = "Deaths per 100k"), xaxis = list(title = "Population Density"),
+```{r data wrangling in total datasets, echo=FALSE}
+#subset the data
+vaccinations <- vaccinations[vaccinations$Location == "CA",]
+vaccinations <- vaccinations[, c("Date", "Administered_Dose1_Pop_Pct", "Series_Complete_Pop_Pct")] 
+cases <- cases[cases$area == "California",]
+cases <- cases[, c("date", "cases", "cumulative_cases", "deaths", "cumulative_deaths")]
+#rename the data
+vaccinations <- rename(vaccinations, date = Date, dose1 = Administered_Dose1_Pop_Pct, dose2 = Series_Complete_Pop_Pct)
+#format date
+vaccinations$date <- as.Date(vaccinations$date, format = "%m/%d/%Y")
+cases$date <- as.Date(cases$date, format = "%Y-%m-%d")
+```
+
+```{r data wrangling in county level datasets, echo=FALSE}
+#subset the data
+county_vaccinations <- county_vaccinations[county_vaccinations$Recip_State == "CA",]
+county_vaccinations <- county_vaccinations[, c("Recip_County", "Date", "Administered_Dose1_Pop_Pct", "Series_Complete_Pop_Pct")] 
+county_cases <- county_cases[county_cases$area_type == "County",]
+county_cases <- county_cases[,c("area", "date", "population", "cases", "cumulative_cases", "deaths", "cumulative_deaths")]
+county_vaccinations <- rename(county_vaccinations, county = Recip_County, date = Date, dose1 = Administered_Dose1_Pop_Pct, dose2 = Series_Complete_Pop_Pct)
+#create new variable
+county_cases$casesper100k <- ((county_cases$cases)/(county_cases$population))*100000
+county_cases$deathsper100k <- ((county_cases$deaths)/(county_cases$population))*100000
+county_cases$cu_casesper100k <- ((county_cases$cumulative_cases)/(county_cases$population))*100000
+county_cases$cu_deathsper100k <- ((county_cases$cumulative_deaths)/(county_cases$population))*100000
+#format date
+county_vaccinations$date <- as.Date(county_vaccinations$date, format = "%m/%d/%Y")
+county_cases$date <- as.Date(county_cases$date, format = "%Y-%m-%d")
+```
+
+Dimensions, headers, and footers of the two datasets were checked. There are 311 observations and 3 variables in the "vaccinations" dataset, as well as 628 observations and 5 variables in the "cases" dataset. Implausible data (e.g., 0 cases increase) was found in the date variable on "2021-10-20" in the "cases" dataset. Considering the 14-day incubation period of the COVID-19 disease, the data from 2021-10-06 to 2021-10-20 were not the final accurate number of cases and deaths since there are still many cases and deaths were not reported timely. Thus, these data were removed from the "cases" dataset. 
+
+```{r data exploration in total datasets, results='hide', echo=FALSE}
+#check the date
+summary(vaccinations$date)
+summary(cases$date)
+#check for missing value
+cases[!complete.cases(cases),]
+vaccinations[!complete.cases(vaccinations),]
+#remove rows with missing value
+cases <- cases[complete.cases(cases),]
+#check the dimensions, headers, footers
+dim(vaccinations)
+dim(cases)
+head(vaccinations)
+cases <- cases[order(cases$date, decreasing = TRUE),]
+head(cases)
+tail(vaccinations)
+tail(cases)
+#remove the data from 2021-10-06 to 2021-10-20
+cases <- cases[!(cases$date >= "2021-10-06"),]
+#take a look at the variables
+str(vaccinations)
+summary(vaccinations$dose1)
+summary(vaccinations$dose2)
+str(cases)
+summary(cases$cases)
+summary(cases$cumulative_cases)
+summary(cases$deaths)
+summary(cases$cumulative_deaths)
+```
+```{r data exploration in county level datasets, results='hide', echo=FALSE}
+#remove rows with missing value
+county_cases <- county_cases[complete.cases(county_cases),]
+#remove the data from 2021-10-06 to 2021-10-20
+county_cases <- county_cases[!(county_cases$date >= "2021-10-06"),]
+```
+
+The two datasets were merged into one dataset by date variable. Final dataset has 296 observations and 7 variables. Exploratory data analysis was conducted in the merged dataset. No missing value, implaussible vaule or data error was found. The data includes COVID-19 partial and fully vaccination rates, daily new cases, cumulative cases, daily new deaths, as well cumulative deaths from 2020/12/14 to 2021/10/05. Both univariate and bivariate summary statistics was analyzed. Exploratory graphs were generated between vaccination rates and cases and deaths.  
+
+
+```{r combine the dataset, results='hide', echo=FALSE}
+#combine the dataset
+covid <- merge(vaccinations, cases, by = "date")
+#exploratory analysis
+dim(covid)
+head(covid)
+tail(covid)
+str(covid)
+summary(covid$date)
+summary(covid$dose1)
+summary(covid$dose2)
+summary(covid$cases)
+summary(covid$cumulative_cases)
+summary(covid$deaths)
+summary(covid$cumulative_cases)
+covid[!complete.cases(covid),]
+```
+
+
+
+
+
+
+**Preliminary Results**
+
+Table 1 presented the summary statistics of the data, including range of the date and median (IQR) of first dose, second dose, daily new cases, cumulative cases, daily new deaths, and cumulative deaths. There are a total of 296 observations collected from 2020-12-14 to 2021-10-05. The maximum partial and fully vaccination rates in California are 52% and 64%, respectively. The medians (IQRs) of the daily new cases and deaths are 4275 (1810, 11520) and 64 (23, 159), respectively. 
+
+```{r table 1, echo=FALSE}
+#Table 1. Characteristics of the COVID-19 data
+covid %>%
+  select("Date" = date,
+         "First dose, %" = dose1,
+         "Second dose, %" = dose2,
+         "Daily new cases" = cases,
+         "Cumulative cases" = cumulative_cases,
+         "Daily new deaths" = deaths,
+         "Cumulative deaths" = cumulative_deaths) %>%
+  tbl_summary() %>%
+  modify_caption ("**Table 1. Characteristics of the COVID-19 data**")
+```
+
+Table 2 presented the correlation coefficients of vaccination rates with daily new cases and deaths. Vaccination rates were negatively associated with daily new cases and deaths. Such negative association was stronger in the correlation between vaccination rates and daily new deaths (R: -0.78 for first dose, -0.68 for second dose).
+
+```{r table 2, echo=FALSE}
+#First dose correlation
+Cases = cor(covid$dose1, covid$cases, use = "complete")
+Deaths = cor(covid$dose1, covid$deaths, use = "complete")
+`First dose` = rbind(Cases, Deaths) 
+colnames(`First dose`) <- "First dose"
+#Second dose correlation
+Cases = cor(covid$dose2, covid$cases, use = "complete")
+Deaths = cor(covid$dose2, covid$deaths, use = "complete")
+`Second dose` = rbind(Cases, Deaths) 
+colnames(`Second dose`) <- "Second dose"
+#Combine the table
+cbind(`First dose`, `Second dose`) %>%
+  knitr::kable(caption = "<strong>Table 2. Correlation coefficients of vacciantion rates and cases/deaths</strong>")
+```
+
+Exploratory graphs were presented in figure 1 and figure 2a-2e. Vaccinations in California started in February and the rates continued to increase. The increase of vaccination rates became more slowly when it achieved around 60% of first dose vaccination rate. The daily new cases started to decrease drastically around February and the cases remained in a stable small number until July. A small break out in daily new cases occurred in July and it achieved its peak in September. The trend pattern of the daily new deaths is similar to daily new cases. 
+
+```{r exploratory graphs, echo=FALSE}
+#Vaccination rates
+covid[covid$dose1>0,] %>%
+ggplot() +
+  geom_point(mapping = aes(x = date, y = dose1, color = "First dose")) +
+  geom_point(mapping = aes(x = date, y = dose2, color = "Second dose")) +
+  labs(title = "Figure 1. Vaccination rates from 2020-12-14 to 2021-10-05") +
+  labs(x = "Date", y = "Vaccination rates")
+
+#Cases
+ggplot(data = covid) +
+  geom_point(mapping = aes(x = date, y = cases)) +
+  labs(title = "Figure 2a. Daily new cases from 2020-12-14 to 2021-10-05") +
+  labs(x = "Date", y = "Daily new cases")
+
+#Deaths
+ggplot(data = covid) +
+  geom_point(mapping = aes(x = date, y = deaths)) +
+  labs(title = "Figure 2b. Daily new deaths from 2020-12-14 to 2021-10-05") +
+  labs(x = "Date", y = "Daily new deaths")
+
+#Cumulative cases
+ggplot(data = covid) +
+  geom_point(mapping = aes(x = date, y = cumulative_cases)) +
+  labs(title = "Figure 2c. Cumulative cases from 2020-12-14 to 2021-10-05") +
+  labs(x = "Date", y = "Cumulative cases")
+
+#Cumulative deaths
+ggplot(data = covid) +
+  geom_point(mapping = aes(x = date, y = cumulative_deaths)) +
+  labs(title = "Figure 2e. Cumulative deaths from 2020-12-14 to 2021-10-05") +
+  labs(x = "Date", y = "Cumulative deaths")
+```
+
+
+Data visualization graphs were generated in Figure 3a & 3b to visualize the relationship between vaccination rates and daily new cases and deaths. There was an non-symmetrical inverse pattern in the relationship of vaccination rates and daily new cases in the beginning. Daily new cases was negatively associated with vaccination rates until the first dose vaccination rates achieved around 50%. After that, daily new cases increase drastically with the increase of vaccination rates. This same pattern was also found in the relationship of vaccination rates and daily new deaths. However, a stronger negative association was observed in the daily new deaths figure in the beginning of the data. 
+
+```{r data visualization, message = FALSE, echo=FALSE}
+#Vaccination rates and cases
+covid[covid$dose1 > 0,] %>%
+ggplot() +
+  geom_point(mapping = aes(x = dose1, y = cases, color = "First dose")) +
+  geom_smooth(mapping = aes(x = dose1, y = cases)) +
+  geom_point(mapping = aes(x = dose2, y = cases, color = "Second dose")) +
+  geom_smooth(mapping = aes(x = dose2, y = cases)) +
+  labs(title = "Figure 3a. Vaccination rates and cases") +
+  labs(x = "Vaccination rates", y = "Daily new cases")
+
+#Vaccination rates and deaths
+covid[covid$dose1 > 0,] %>%
+ggplot() +
+  geom_point(mapping = aes(x = dose1, y = deaths, color = "First dose")) +
+  geom_smooth(mapping = aes(x = dose1, y = deaths)) +
+  geom_point(mapping = aes(x = dose2, y = deaths, color = "Second dose")) +
+  geom_smooth(mapping = aes(x = dose2, y = deaths)) +
+  labs(title = "Figure 3b. Vaccination rates and deaths") +
+  labs(x = "Vaccination rates", y = "Daily new deaths")
+```
+
+
+
+Interactive visualization plots were created to observe the cumulative COVID-19 cases and deaths, as well as vaccination rates across different counties in California. Accourding to the interactive plot, there is no association between the cumulative COVID-19 cases per 100k population and population density observed. Lassen, Kings, and Imperial county are the three counties with the most cumulative COVID-19 cases per 100k population, following with San Berndino, Riverside, and Los Angeles. Imperial, San Berdino, and Los Angeles are the three counties with the most cumulative COVID-19 deaths per 100k population, following with San Joaquin, Inyo, and Riverside. Lassen, Tehama, and Del Norte are the three counties with the least vaccination rates of less than 40% fully vaccinated people, following with Kings and Shasta.
+
+```{r, echo=FALSE}
+#Interactive plot 1: Cumulative Covid-19 cases across counties
+county_cases %>% filter(cases>0 & date == "2021-10-05") %>%
+  plot_ly(x = ~population, y = ~cu_casesper100k,
+          type = 'scatter', mode = 'markers', color = ~area,
+          size = ~population, sizes = c(5, 70), marker = list(sizemode = 'diameter', opacity = 0.5)) %>%
+  layout(title = "Population-normalized cumulative COVID-19 cases (per 100k) vs. population density for counties in California", yaxis = list(title = "Cumulative cases per 100k"), xaxis = list(title = "Population Density"),
          hovermode = "compare")
+```
 
-# filter out "District of Columbia"
-cv_states_today_scatter <- cv_states_today %>% filter(state!="District of Columbia")
 
-p2_scatter <- cv_states_today_scatter %>% 
-  plot_ly(x = ~pop_density, y = ~deathsper100k,
-          type = 'scatter', mode = 'markers', color = ~state,
-          size = ~population, sizes = c(5, 70), marker = list(sizemode='diameter', opacity=0.5),
+```{r, echo=FALSE}
+#Interactive plot 2: Cumulative Covid-19 deaths across counties
+county_cases %>% filter(cases>0 & date == "2021-10-05") %>%
+  plot_ly(x = ~population, y = ~cu_deathsper100k,
+          type = 'scatter', mode = 'markers', color = ~area,
+          size = ~population, sizes = c(5, 70), marker = list(sizemode = 'diameter', opacity = 0.5),
           hoverinfo = 'text',
-          text = ~paste( paste(state, ":", sep=""), paste(" Cases per 100k: ", per100k, sep="") , paste(" Deaths per 100k: ",
-                        deathsper100k, sep=""), sep = "<br>")) %>%
-  layout(title = "Population-normalized COVID-19 deaths vs. population density",
-                  yaxis = list(title = "Deaths per 100k"), xaxis = list(title = "Population Density"),
+          text = ~paste( paste(area, ":", sep = ""), paste(" Cumulative cases per 100k:", cu_casesper100k, sep = ""), paste(" Cumulative deaths per 100k:", cu_deathsper100k, sep = ""), sep = "<br>")) %>%
+  layout(title = "Population-normalized cumulative COVID-19 deaths (per 100k) vs. population density for counties in California", yaxis = list(title = "Cumulative deaths per 100k"), xaxis = list(title = "Population Density"),
          hovermode = "compare")
 ```
 
-## Showcasing plots {.tabset}
 
-### Tab 1
-
-```{r echo=FALSE}
-p1_scatter
+```{r, echo=FALSE}
+#Interactive plot 3: Covid-19 vaccination rates across counties
+county_vaccinations %>% filter(dose1>0) %>%
+  plot_ly(x=~date, y=~dose2, color=~county, type="scatter", mode="lines",
+          hoverinfo = 'text',
+          text = ~paste(paste("Date: ", date, sep = ""), paste(county, ":", sep=""), paste("Vaccination rate: ", dose2, sep=""))) %>%
+  layout(title = "Covid-19 fully vaccination rates across counties in California", yaxis = list(title = "Fully vaccination rates"), xaxis = list(title = "Date"),
+         hovermode = "compare")
 ```
 
-### Tab 2
 
-```{r echo=FALSE}
-p2_scatter
-```
 
-{-}
+**Conclusion**
+
+There is a positive association of vaccination rates and daily new cases and deaths when the first dose of vaccination rate achieved around 50%. This may be due to the re-opening of the economic and lift of mask mandate during that time. Overall, we could see the protective effect of vaccine towards infection and death according to the data in the beginning. A stronger negative association in the beginning of vaccination rates and daily new deaths compared to daily new cases may be due to a stronger efficacy of the vaccine towards preventing mortality. 
+
+
+

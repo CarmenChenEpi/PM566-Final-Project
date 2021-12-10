@@ -1,7 +1,7 @@
-name: "Carmen's PM566 website"
+name: "Vaccination rates and COVID-19"
 output_dir: "."
 navbar:
-  title: "Carmen's PM566 Website"
+  title: "Vaccination rates and COVID-19"
   left:
     - text: "Home"
       href: index.html

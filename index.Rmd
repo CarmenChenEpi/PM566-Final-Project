@@ -285,5 +285,8 @@ county_vaccinations %>% filter(dose1>0) %>%
 
 There is a positive association of vaccination rates and daily new cases and deaths when the first dose of vaccination rate achieved around 50%. This may be due to the re-opening of the economic and lift of mask mandate during that time. Overall, we could see the protective effect of vaccine towards infection and death according to the data in the beginning. A stronger negative association in the beginning of vaccination rates and daily new deaths compared to daily new cases may be due to a stronger efficacy of the vaccine towards preventing mortality. 
 
+# **Contact Information**
+Email: chenjiaw@usc.edu
+GitHub account: CarmenChenEpi
 
 
